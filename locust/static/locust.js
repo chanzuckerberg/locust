@@ -42,9 +42,9 @@ $("ul.tabs").tabs("div.panes > div").on("onClick", function(event) {
     if (event.target == $(".chart-tab-link")[0]) {
         // trigger resizing of charts
         rpsChart.resize();
+        errorsChart.resize();
         responseTimeChart.resize();
         usersChart.resize();
-        errorsChart.resize();
     }
 });
 
