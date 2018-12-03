@@ -120,9 +120,12 @@ $(".stats_label").click(function(event) {
 
 // init charts
 var rpsChart = new LocustLineChart($(".charts-container"), "Total Requests per Second", ["RPS"], "reqs/s");
-var errorsChart = new LocustLineChart($(".charts-container"), "Total HTTP Errors", ["4xx Errors", "5xx Errors"], "errors");
+var errorsChart = new LocustLineChart($(".charts-container"), "HTTP Errors", ["4xx Errors", "5xx Errors"], "errors");
 var responseTimeChart = new LocustLineChart($(".charts-container"), "Response Times (ms)", ["Median Response Time", "95% percentile"], "ms");
 var usersChart = new LocustLineChart($(".charts-container"), "Number of Users", ["Users"], "users");
+
+var total4xxErrors = 0;
+var total5xxErrors = 0;
 
 function updateStats() {
     $.get('./stats/requests', function (report) {
@@ -151,19 +154,22 @@ function updateStats() {
         alternate = false;
         $('#errors tbody').jqoteapp(errors_tpl, (report.errors).sort(sortBy(sortAttribute, desc)));
 
-        var total400Errors = report.errors.reduce(function(acc, err) {
+        var newTotal4xxErrors = report.errors.reduce(function(acc, err) {
             if (err.error.match(/HTTPError/) && err.error.match(/4[0-9][0-9]/)) {
                 return acc + err.occurences;
             }
             return acc;
         }, 0);
 
-        var total500Errors = report.errors.reduce(function(acc, err) {
+        var newTotal5xxErrors = report.errors.reduce(function(acc, err) {
             if (err.error.match(/HTTPError/) && err.error.match(/5[0-9][0-9]/)) {
                 return acc + err.occurences;
             }
             return acc;
         }, 0);
+
+        var current4xxErrors = newTotal4xxErrors - total4xxErrors;
+        var current5xxErrors = newTotal5xxErrors - total5xxErrors;
 
         if (report.state !== "stopped"){
             // get total stats row
@@ -172,8 +178,11 @@ function updateStats() {
             rpsChart.addValue([total.current_rps]);
             responseTimeChart.addValue([report.current_response_time_percentile_50, report.current_response_time_percentile_95]);
             usersChart.addValue([report.user_count]);
-            errorsChart.addValue([total400Errors, total500Errors]);
+            errorsChart.addValue([current4xxErrors, current5xxErrors]);
         }
+
+        total4xxErrors = newTotal4xxErrors;
+        total5xxErrors = newTotal5xxErrors;
 
         setTimeout(updateStats, 2000);
     });
