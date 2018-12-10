@@ -43,6 +43,7 @@ $("ul.tabs").tabs("div.panes > div").on("onClick", function(event) {
         // trigger resizing of charts
         rpsChart.resize();
         errorsChart.resize();
+        routeResponseTimeChart.resize();
         responseTimeChart.resize();
         usersChart.resize();
     }
@@ -121,6 +122,7 @@ $(".stats_label").click(function(event) {
 // init charts
 var rpsChart = new LocustLineChart($(".charts-container"), "Total Requests per Second", ["RPS"], "reqs/s");
 var errorsChart = new LocustLineChart($(".charts-container"), "HTTP Errors", ["4xx Errors", "5xx Errors"], "errors");
+var routeResponseTimeChart = new LocustLineChart($(".charts-container"), "Service P95 Response Time", ["Feed", "Member", "Library", "Search"], "ms");
 var responseTimeChart = new LocustLineChart($(".charts-container"), "Response Times (ms)", ["Median Response Time", "95% percentile"], "ms");
 var usersChart = new LocustLineChart($(".charts-container"), "Number of Users", ["Users"], "users");
 
@@ -128,6 +130,14 @@ var total4xxErrors = 0;
 var total5xxErrors = 0;
 
 function updateStats() {
+    $.get('./stats/service_response_time', function(response) {
+        routeResponseTimeChart.addValue([
+            response.feed,
+            response.member, 
+            response.library, 
+            response.search
+        ])
+    })
     $.get('./stats/requests', function (report) {
         $("#total_rps").html(Math.round(report.total_rps*100)/100);
         //$("#fail_ratio").html(Math.round(report.fail_ratio*10000)/100);
