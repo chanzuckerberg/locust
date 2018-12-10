@@ -4,9 +4,11 @@ import csv
 import json
 import logging
 import os.path
+import re
 from collections import defaultdict
 from itertools import chain
 from time import time
+from math import ceil
 
 import six
 from flask import Flask, make_response, jsonify, render_template, request
@@ -15,7 +17,7 @@ from gevent import pywsgi
 from locust import __version__ as version
 from six.moves import StringIO, xrange
 
-from . import runners
+from . import runners, events
 from .runners import MasterLocustRunner
 from .stats import distribution_csv, median_from_dict, requests_csv, sort_stats
 from .util.cache import memoize
@@ -162,6 +164,41 @@ def exceptions_csv():
     response.headers["Content-type"] = "text/csv"
     response.headers["Content-disposition"] = disposition
     return response
+
+feed_response_times = []
+search_response_times = []
+library_response_times = []
+member_response_times = []
+
+def route_stat_plugin(request_type, name, response_time, response_length, **kw):
+    if re.search("^feed", name):
+        feed_response_times.append(response_time)
+    elif re.search("^search", name):
+        search_response_times.append(response_time)
+    elif re.search("^library", name):
+        library_response_times.append(response_time)
+    elif re.search("^member", name):
+        member_response_times.append(response_time)
+
+events.request_success += route_stat_plugin
+
+def calculate_route_p95(route_data):
+	if (len(route_data) > 0):
+		route_data.sort()
+		n = len(route_data)
+		p95_index = ceil(0.95 * n) - 1
+		return route_data[p95_index]
+	return 0
+
+@app.route('/stats/service_response_time')
+def response_time_stats_page():
+    response = {
+        "feed": calculate_route_p95(feed_response_times),
+        "search": calculate_route_p95(search_response_times),
+        "library": calculate_route_p95(library_response_times),
+        "member": calculate_route_p95(member_response_times)
+	}
+    return jsonify(response)
 
 def start(locust, options):
     pywsgi.WSGIServer((options.web_host, options.port),

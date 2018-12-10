@@ -130,7 +130,7 @@ var total4xxErrors = 0;
 var total5xxErrors = 0;
 
 function updateStats() {
-    $.get('./response_time_stats', function(response) {
+    $.get('./stats/service_response_time', function(response) {
         routeResponseTimeChart.addValue([
             response.feed,
             response.member, 
